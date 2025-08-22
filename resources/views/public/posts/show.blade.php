@@ -5,9 +5,26 @@
         <h1 class="mt-2 text-4xl font-semibold">{{ $post->title }}</h1>
         <p class="text-sm italic text-gray-500">{{ optional($post->published_at)->format('d M Y, H:i') }}</p>
 
-        <div class="my-6 aspect-video rounded bg-gray-200 overflow-hidden">
-            @if ($post->thumbnail_path)
-                <img src="{{ asset('storage/' . $post->thumbnail_path) }}" alt="" class="w-full h-full object-cover">
+        <div class="my-6 aspect-video rounded overflow-hidden bg-gray-200">
+            @php
+                $src = null;
+                $path = $post->thumbnail_path;
+
+                if ($path) {
+                    if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://', '/'])) {
+                        $src = $path;
+                    } elseif (\Illuminate\Support\Str::startsWith($path, 'storage/')) {
+                        $src = asset($path);
+                    } elseif (\Illuminate\Support\Str::startsWith($path, 'thumbs/')) {
+                        $src = asset('storage/' . $path);
+                    } else {
+                        $src = asset($path);
+                    }
+                }
+            @endphp
+
+            @if ($src)
+                <img src="{{ $src }}" alt="{{ $post->title }}" class="w-full h-full object-cover">
             @endif
         </div>
 

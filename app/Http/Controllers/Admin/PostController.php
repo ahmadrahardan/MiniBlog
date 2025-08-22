@@ -2,95 +2,113 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Post;
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Post;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class PostController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $posts = Post::latest()->paginate(15);
         return view('admin.posts.index', compact('posts'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return view('admin.posts.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'title' => 'required|max:255',
-            'slug' => 'nullable|alpha_dash|unique:posts,slug',
-            'excerpt' => 'nullable|max:300',
-            'content' => 'required',
+        $validated = $request->validate([
+            'title'     => 'required|string|max:255',
+            'slug'      => ['nullable', 'alpha_dash', Rule::unique('posts', 'slug')],
+            'excerpt'   => 'nullable|max:300',
+            'content'   => 'required',
             'thumbnail' => 'nullable|image|max:2048',
-            'publish' => 'nullable|boolean',
+            'publish'   => 'nullable|boolean',
         ]);
-        $data['slug'] = $data['slug'] ?? Str::slug($data['title']) . '-' . Str::random(5);
+
+        $slug = $validated['slug'] ?? (Str::slug($validated['title']) . '-' . Str::random(5));
+
+        $thumbPath = null;
         if ($request->hasFile('thumbnail')) {
-            $data['thumbnail_path'] = $request->file('thumbnail')->store('thumbs', 'public');
+            $thumbPath = $request->file('thumbnail')->storeAs(
+                'thumbs',
+                Str::random(16) . '.' . $request->file('thumbnail')->getClientOriginalExtension(),
+                'public'
+            );
         }
-        $data['user_id'] = auth()->id();
-        $data['published_at'] = $request->boolean('publish') ? now() : null;
-        Post::create($data);
+
+        Post::create([
+            'user_id'        => $request->user()->id,
+            'title'          => $validated['title'],
+            'slug'           => $slug,
+            'excerpt'        => $validated['excerpt'] ?? null,
+            'content'        => $validated['content'],
+            'thumbnail_path' => $thumbPath ? 'storage/' . $thumbPath : null,
+            'published_at'   => $request->boolean('publish') ? now() : null,
+        ]);
+
         return redirect()->route('admin.posts.index')->with('ok', 'Post dibuat.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Post $post)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Post $post)
     {
         return view('admin.posts.edit', compact('post'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Post $post)
     {
-        $data = $request->validate([
-            'title' => 'required|max:255',
-            'slug' => "required|alpha_dash|unique:posts,slug,$post->id",
-            'excerpt' => 'nullable|max:300',
-            'content' => 'required',
+        $validated = $request->validate([
+            'title'     => 'required|string|max:255',
+            'slug'      => ['required', 'alpha_dash', Rule::unique('posts', 'slug')->ignore($post->id)],
+            'excerpt'   => 'nullable|max:300',
+            'content'   => 'required',
             'thumbnail' => 'nullable|image|max:2048',
-            'publish' => 'nullable|boolean',
+            'publish'   => 'nullable|boolean',
         ]);
+
+        $post->title   = $validated['title'];
+        $post->slug    = $validated['slug'];
+        $post->excerpt = $validated['excerpt'] ?? null;
+        $post->content = $validated['content'];
+        $post->published_at = $request->boolean('publish') ? ($post->published_at ?? now()) : null;
+
         if ($request->hasFile('thumbnail')) {
-            $data['thumbnail_path'] = $request->file('thumbnail')->store('thumbs', 'public');
+            if ($post->thumbnail_path && Storage::disk('public')->exists(str_replace('storage/', '', $post->thumbnail_path))) {
+                Storage::disk('public')->delete(str_replace('storage/', '', $post->thumbnail_path));
+            }
+
+            $newThumb = $request->file('thumbnail')->storeAs(
+                'thumbs',
+                Str::random(16) . '.' . $request->file('thumbnail')->getClientOriginalExtension(),
+                'public'
+            );
+
+            $post->thumbnail_path = 'storage/' . $newThumb;
         }
-        $data['published_at'] = $request->boolean('publish') ? ($post->published_at ?? now()) : null;
-        $post->update($data);
+
+        $post->save();
+
         return back()->with('ok', 'Post diperbarui.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Post $post)
     {
+        if ($post->thumbnail_path && Storage::disk('public')->exists(str_replace('storage/', '', $post->thumbnail_path))) {
+            Storage::disk('public')->delete(str_replace('storage/', '', $post->thumbnail_path));
+        }
+
         $post->delete();
         return back()->with('ok', 'Post dihapus.');
     }

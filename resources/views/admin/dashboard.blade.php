@@ -1,7 +1,5 @@
 <x-app-layout>
-    <x-slot name="header">
-        <x-admin-header title="Dashboard" />
-    </x-slot>
+    <x-slot name="header"></x-slot>
 
     <div class="py-10">
         <div class="mx-auto max-w-6xl sm:px-6 lg:px-8">
