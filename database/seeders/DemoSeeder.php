@@ -21,16 +21,6 @@ class DemoSeeder extends Seeder
             ]
         );
 
-        $admin = User::updateOrCreate(
-            ['email' => 'rahardan313@gmail.com'],
-            [
-                'name' => 'Rahar',
-                'password' => 'password',
-                'is_admin' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
         $user = User::updateOrCreate(
             ['email' => 'user@example.com'],
             [
