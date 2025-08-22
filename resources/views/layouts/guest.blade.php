@@ -10,13 +10,14 @@
 
 <body class="bg-gray-100 antialiased">
 
-    {{-- Top bar abu-abu + tombol login bulat --}}
-    <div class="bg-gray-200/80">
+    <div class="bg-slate-300">
         <div class="max-w-6xl mx-auto px-4 py-2 flex justify-end">
             <a href="{{ route('login') }}"
-                class="rounded-full bg-slate-900 text-white px-4 py-1 text-sm shadow hover:bg-gray-800 transition">
+                class="inline-flex items-center justify-center rounded-full px-4 py-1 text-sm font-semibold
+            !text-white !bg-gray-900 hover:!bg-gray-800 !ring-1 !ring-white/25 shadow transition">
                 Login Admin
             </a>
+
         </div>
     </div>
 
